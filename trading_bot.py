@@ -210,41 +210,30 @@ def create_bot():
                                                                                                 if pct_chnge(price_bought_at, current_price(ID)) >= 100:
                                                                                                     sell(
                                                                                                         ID)
-                                                                                                    break
                                                                                             else:
                                                                                                 sell(
                                                                                                     ID)
-                                                                                                break
                                                                                     else:
                                                                                         sell(
                                                                                             ID)
-                                                                                        break
                                                                             else:
                                                                                 sell(
                                                                                     ID)
-                                                                                break
                                                                     else:
                                                                         sell(
                                                                             ID)
-                                                                        break
                                                             else:
                                                                 sell(ID)
-                                                                break
                                                     else:
                                                         sell(ID)
-                                                        break
                                             else:
                                                 sell(ID)
-                                                break
                                     else:
                                         sell(ID)
-                                        break
                             else:
                                 sell(ID)
-                                break
                     else:
                         sell(ID)
-                        break
 
 
 print('starting...')
