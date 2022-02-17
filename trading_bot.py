@@ -139,42 +139,42 @@ def create_bot():
                     def pct_chnge(initial_price, new_price):
                         return (((new_price - initial_price) / abs(initial_price)) * 100)
                     while pct_chnge(price_bought_at, current_price(ID)) > -10.0:
-                        time.sleep(25)
+                        time.sleep(30)
                         new_coin_balance = float(CBpro.get_account(
                             data[data['id'] == ID]['id_#'].max())['balance'])
                         if new_coin_balance != orig_coin_balance:
                             break
                         elif pct_chnge(price_bought_at, current_price(ID)) >= 10.0:
                             while pct_chnge(price_bought_at, current_price(ID)) > 0.0:
-                                time.sleep(25)
+                                time.sleep(30)
                                 new_coin_balance = float(CBpro.get_account(
                                     data[data['id'] == ID]['id_#'].max())['balance'])
                                 if new_coin_balance != orig_coin_balance:
                                     break
                                 elif pct_chnge(price_bought_at, current_price(ID)) >= 20.0:
                                     while pct_chnge(price_bought_at, current_price(ID)) > 10.0:
-                                        time.sleep(25)
+                                        time.sleep(30)
                                         new_coin_balance = float(CBpro.get_account(
                                             data[data['id'] == ID]['id_#'].max())['balance'])
                                         if new_coin_balance != orig_coin_balance:
                                             break
                                         elif pct_chnge(price_bought_at, current_price(ID)) >= 30.0:
                                             while pct_chnge(price_bought_at, current_price(ID)) > 20.0:
-                                                time.sleep(25)
+                                                time.sleep(30)
                                                 new_coin_balance = float(CBpro.get_account(
                                                     data[data['id'] == ID]['id_#'].max())['balance'])
                                                 if new_coin_balance != orig_coin_balance:
                                                     break
                                                 elif pct_chnge(price_bought_at, current_price(ID)) >= 40.0:
                                                     while pct_chnge(price_bought_at, current_price(ID)) > 30.0:
-                                                        time.sleep(25)
+                                                        time.sleep(30)
                                                         new_coin_balance = float(CBpro.get_account(
                                                             data[data['id'] == ID]['id_#'].max())['balance'])
                                                         if new_coin_balance != orig_coin_balance:
                                                             break
                                                         elif pct_chnge(price_bought_at, current_price(ID)) >= 50.0:
                                                             while pct_chnge(price_bought_at, current_price(ID)) > 40.0:
-                                                                time.sleep(25)
+                                                                time.sleep(30)
                                                                 new_coin_balance = float(CBpro.get_account(
                                                                     data[data['id'] == ID]['id_#'].max())['balance'])
                                                                 if new_coin_balance != orig_coin_balance:
@@ -182,7 +182,7 @@ def create_bot():
                                                                 elif pct_chnge(price_bought_at, current_price(ID)) >= 60.0:
                                                                     while pct_chnge(price_bought_at, current_price(ID)) > 50.0:
                                                                         time.sleep(
-                                                                            25)
+                                                                            30)
                                                                         new_coin_balance = float(CBpro.get_account(
                                                                             data[data['id'] == ID]['id_#'].max())['balance'])
                                                                         if new_coin_balance != orig_coin_balance:
@@ -190,7 +190,7 @@ def create_bot():
                                                                         elif pct_chnge(price_bought_at, current_price(ID)) >= 70.0:
                                                                             while pct_chnge(price_bought_at, current_price(ID)) > 60.0:
                                                                                 time.sleep(
-                                                                                    25)
+                                                                                    30)
                                                                                 new_coin_balance = float(CBpro.get_account(
                                                                                     data[data['id'] == ID]['id_#'].max())['balance'])
                                                                                 if new_coin_balance != orig_coin_balance:
@@ -198,7 +198,7 @@ def create_bot():
                                                                                 elif pct_chnge(price_bought_at, current_price(ID)) >= 80.0:
                                                                                     while pct_chnge(price_bought_at, current_price(ID)) > 70.0:
                                                                                         time.sleep(
-                                                                                            25)
+                                                                                            30)
                                                                                         new_coin_balance = float(CBpro.get_account(
                                                                                             data[data['id'] == ID]['id_#'].max())['balance'])
                                                                                         if new_coin_balance != orig_coin_balance:
@@ -206,32 +206,42 @@ def create_bot():
                                                                                         elif pct_chnge(price_bought_at, current_price(ID)) >= 90.0:
                                                                                             while pct_chnge(price_bought_at, current_price(ID)) > 80.0:
                                                                                                 time.sleep(
-                                                                                                    25)
+                                                                                                    30)
                                                                                                 if pct_chnge(price_bought_at, current_price(ID)) >= 100:
                                                                                                     sell(
                                                                                                         ID)
+                                                                                                    break
                                                                                             else:
                                                                                                 sell(
                                                                                                     ID)
+
                                                                                     else:
                                                                                         sell(
                                                                                             ID)
+
                                                                             else:
                                                                                 sell(
                                                                                     ID)
+
                                                                     else:
                                                                         sell(
                                                                             ID)
+
                                                             else:
                                                                 sell(ID)
+
                                                     else:
                                                         sell(ID)
+
                                             else:
                                                 sell(ID)
+
                                     else:
                                         sell(ID)
+
                             else:
                                 sell(ID)
+
                     else:
                         sell(ID)
 
