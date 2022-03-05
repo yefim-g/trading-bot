@@ -5,9 +5,13 @@ import config
 import json
 import os
 import sys
+import numpy as np
+
 
 # INSTANTIATIONS PRIOR TO TRADING BELOW
 CRYPTO_LIVE_PRICES = pd.DataFrame(columns=['ID', 'PRICE'])
+spec_df = pd.DataFrame()
+last_price = 0
 print('initializing...')
 
 # API information
@@ -25,6 +29,7 @@ CBpro = cbpro.AuthenticatedClient(key=API,
 cb_public = cbpro.PublicClient()
 
 # FUNCTIONS BELOW
+
 
 def update_data_table():
     '''To accomodate new listings'''
@@ -159,12 +164,20 @@ def create_bot():
         global RH_DF
         global current_time_check
         # if time.localtime()[3] == current_time_check[3] + 1: <-- This updates RH_DF every hr
-        if time.localtime()[4] == current_time_check[4] + 10:
-            current_time_check = time.localtime()
-            RH_DF = update_RHs()
-            data = update_data_table()
-            print(
-                f'Running @: {current_time[1]}/{current_time[2]}/{current_time[0]} {current_time[3]}:{current_time[4]}:{current_time[5]}')
+        if current_time_check[4] < 50:
+            if time.localtime()[4] == current_time_check[4] + 10:
+                current_time_check = time.localtime()
+                RH_DF = update_RHs()
+                data = update_data_table()
+                print(
+                    f'Running @: {current_time[1]}/{current_time[2]}/{current_time[0]} {current_time[3]}:{current_time[4]}:{current_time[5]}')
+        elif current_time_check[4] >= 50:
+            if time.localtime()[4] == (current_time_check[4] + 10) - 60:
+                current_time_check = time.localtime()
+                RH_DF = update_RHs()
+                data = update_data_table()
+                print(
+                    f'Running @: {current_time[1]}/{current_time[2]}/{current_time[0]} {current_time[3]}:{current_time[4]}:{current_time[5]}')
 
         # Implementation of Websocket
         ID_LIST = [x[1][0] for x in data.iterrows()]
@@ -206,6 +219,41 @@ def create_bot():
 
             def on_close(self):
                 print('-- END --')
+
+        class mySubWebsocketClient(cbpro.WebsocketClient):
+            def on_open(self):
+                self.url = 'wss://ws-feed.pro.coinbase.com/'
+                self.products = ID_LIST
+                self.channels = ['ticker']
+                self.message_count = 0
+                print('-- START --')
+
+            def on_message(self, msg):
+                self.message_count += 1
+                data = json.dumps(msg)
+                current_ticks = json.loads(data)
+                global spec_df
+                df_prices = pd.DataFrame(columns=['ID', 'PRICE'])
+                for x in current_ticks:
+                    crypto_price = []
+                    STR_ID = ''
+                    STR_PRICE = ''
+                    for ID in current_ticks['product_id']:
+                        STR_ID += ID
+                    crypto_price.append(STR_ID)
+                    for PRICE in current_ticks['price']:
+                        STR_PRICE += PRICE
+                    crypto_price.append(float(STR_PRICE))
+                    df_prices = df_prices.append(crypto_price)
+                df_prices1 = pd.DataFrame()
+                df_prices1 = df_prices1.append(df_prices.iloc[0])
+                df_prices1 = df_prices1.append(df_prices.iloc[1])
+                c_prices = df_prices1.loc[1][0]
+                c_ids = df_prices1.loc[0][0]
+                df_prices1 = df_prices1.assign(PRICE=c_prices)
+                df_prices1 = df_prices1.assign(ID=c_ids)
+                df_prices1.pop(0)
+                spec_df = spec_df.append(df_prices1)
 
         class suppress_output:
             def __init__(self, suppress_stdout=False, suppress_stderr=False):
@@ -255,128 +303,129 @@ def create_bot():
                 RH = RH_DF.loc[RH_DF['ID'] == ID]['REL_HIGH'].max()
                 return RH
             if find_price(ID) >= find_RH(ID):
-                orig_USD_balance = float(CBpro.get_account(
-                    'd752888c-f5d9-4b53-ac0f-017348119031')['balance'])
-                buy(ID)
-                orig_coin_balance = float(CBpro.get_account(
-                    data[data['id'] == ID]['id_#'].max())['balance'])
-                price_bought_at = find_price(ID)
-                new_USD_balance = float(CBpro.get_account(
-                    'd752888c-f5d9-4b53-ac0f-017348119031')['balance'])
-                if orig_USD_balance > new_USD_balance:
-                    def pct_chnge(initial_price, new_price):
-                        return (((new_price - initial_price) / abs(initial_price)) * 100)
-                    while pct_chnge(price_bought_at, current_price(ID)) > -10.0:
-                        time.sleep(10)
-                        new_coin_balance = float(CBpro.get_account(
-                            data[data['id'] == ID]['id_#'].max())['balance'])
-                        if new_coin_balance != orig_coin_balance:
-                            break
-                        elif pct_chnge(price_bought_at, current_price(ID)) >= 10.0:
-                            while pct_chnge(price_bought_at, current_price(ID)) > 0.0:
-                                time.sleep(10)
-                                new_coin_balance = float(CBpro.get_account(
-                                    data[data['id'] == ID]['id_#'].max())['balance'])
-                                if new_coin_balance != orig_coin_balance:
-                                    break
-                                elif pct_chnge(price_bought_at, current_price(ID)) >= 20.0:
-                                    while pct_chnge(price_bought_at, current_price(ID)) > 10.0:
-                                        time.sleep(10)
-                                        new_coin_balance = float(CBpro.get_account(
-                                            data[data['id'] == ID]['id_#'].max())['balance'])
-                                        if new_coin_balance != orig_coin_balance:
-                                            break
-                                        elif pct_chnge(price_bought_at, current_price(ID)) >= 30.0:
-                                            while pct_chnge(price_bought_at, current_price(ID)) > 20.0:
-                                                time.sleep(10)
-                                                new_coin_balance = float(CBpro.get_account(
-                                                    data[data['id'] == ID]['id_#'].max())['balance'])
-                                                if new_coin_balance != orig_coin_balance:
-                                                    break
-                                                elif pct_chnge(price_bought_at, current_price(ID)) >= 40.0:
-                                                    while pct_chnge(price_bought_at, current_price(ID)) > 30.0:
-                                                        time.sleep(10)
-                                                        new_coin_balance = float(CBpro.get_account(
-                                                            data[data['id'] == ID]['id_#'].max())['balance'])
-                                                        if new_coin_balance != orig_coin_balance:
-                                                            break
-                                                        elif pct_chnge(price_bought_at, current_price(ID)) >= 50.0:
-                                                            while pct_chnge(price_bought_at, current_price(ID)) > 40.0:
-                                                                time.sleep(10)
-                                                                new_coin_balance = float(CBpro.get_account(
-                                                                    data[data['id'] == ID]['id_#'].max())['balance'])
-                                                                if new_coin_balance != orig_coin_balance:
-                                                                    break
-                                                                elif pct_chnge(price_bought_at, current_price(ID)) >= 60.0:
-                                                                    while pct_chnge(price_bought_at, current_price(ID)) > 50.0:
-                                                                        time.sleep(
-                                                                            10)
-                                                                        new_coin_balance = float(CBpro.get_account(
-                                                                            data[data['id'] == ID]['id_#'].max())['balance'])
-                                                                        if new_coin_balance != orig_coin_balance:
-                                                                            break
-                                                                        elif pct_chnge(price_bought_at, current_price(ID)) >= 70.0:
-                                                                            while pct_chnge(price_bought_at, current_price(ID)) > 60.0:
-                                                                                time.sleep(
-                                                                                    10)
-                                                                                new_coin_balance = float(CBpro.get_account(
-                                                                                    data[data['id'] == ID]['id_#'].max())['balance'])
-                                                                                if new_coin_balance != orig_coin_balance:
-                                                                                    break
-                                                                                elif pct_chnge(price_bought_at, current_price(ID)) >= 80.0:
-                                                                                    while pct_chnge(price_bought_at, current_price(ID)) > 70.0:
-                                                                                        time.sleep(
-                                                                                            10)
-                                                                                        new_coin_balance = float(CBpro.get_account(
-                                                                                            data[data['id'] == ID]['id_#'].max())['balance'])
-                                                                                        if new_coin_balance != orig_coin_balance:
-                                                                                            break
-                                                                                        elif pct_chnge(price_bought_at, current_price(ID)) >= 90.0:
-                                                                                            while pct_chnge(price_bought_at, current_price(ID)) > 80.0:
-                                                                                                time.sleep(
-                                                                                                    10)
-                                                                                                if pct_chnge(price_bought_at, current_price(ID)) >= 100:
+                if data[data['id'] == ID]['id_#'].max() is not np.NAN:
+                    orig_USD_balance = float(CBpro.get_account(
+                        'd752888c-f5d9-4b53-ac0f-017348119031')['balance'])
+                    buy(ID)
+                    price_bought_at = find_price(ID)
+                    new_USD_balance = float(CBpro.get_account(
+                        'd752888c-f5d9-4b53-ac0f-017348119031')['balance'])
+                    if orig_USD_balance > new_USD_balance:
+                        def pct_chnge(initial_price, new_price):
+                            return (((new_price - initial_price) / abs(initial_price)) * 100)
+
+                        def do_WS_find_ID_price(ID):
+                            sub_WS = mySubWebsocketClient()
+                            global spec_df
+                            global last_price
+                            spec_df = pd.DataFrame()
+                            iter = 0
+                            with suppress_output(suppress_stdout=True, suppress_stderr=True):
+                                sub_WS.start()
+                                while iter < 100:
+                                    time.sleep(.01)
+                                    iter += 1
+                                else:
+                                    sub_WS.close()
+                            try:
+                                new_prices = str(
+                                    (spec_df.loc[spec_df['ID'] == ID]['PRICE'])[0])
+                                last_price = str(
+                                    (spec_df.loc[spec_df['ID'] == ID]['PRICE'][0]))
+                                return float(new_prices)
+                            except:
+                                return float(last_price)
+                        i = 1
+                        while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > -10.0:
+                            if i > 1:
+                                break
+                            elif pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 10.0:
+                                i = 2
+                                while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > 0.0:
+                                    if i > 2:
+                                        break
+                                    elif pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 20.0:
+                                        i = 3
+                                        while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > 10.0:
+                                            if i > 3:
+                                                break
+                                            elif pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 30.0:
+                                                i = 4
+                                                while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > 20.0:
+                                                    if i > 4:
+                                                        break
+                                                    elif pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 40.0:
+                                                        i = 5
+                                                        while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > 30.0:
+                                                            if i > 5:
+                                                                break
+                                                            elif pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 50.0:
+                                                                i = 6
+                                                                while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > 40.0:
+                                                                    if i > 6:
+                                                                        break
+                                                                    elif pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 60.0:
+                                                                        i = 7
+                                                                        while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > 50.0:
+                                                                            if i > 7:
+                                                                                break
+                                                                            elif pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 70.0:
+                                                                                i = 8
+                                                                                while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > 60.0:
+                                                                                    if i > 8:
+                                                                                        break
+                                                                                    elif pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 80.0:
+                                                                                        i = 9
+                                                                                        while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > 70.0:
+                                                                                            if i > 9:
+                                                                                                break
+                                                                                            elif pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 90.0:
+                                                                                                i = 10
+                                                                                                while pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) > 80.0:
+                                                                                                    if pct_chnge(price_bought_at, do_WS_find_ID_price(ID)) >= 100:
+                                                                                                        sell(
+                                                                                                            ID)
+                                                                                                        break
+                                                                                                else:
                                                                                                     sell(
                                                                                                         ID)
-                                                                                                    break
-                                                                                            else:
-                                                                                                sell(
-                                                                                                    ID)
 
-                                                                                    else:
-                                                                                        sell(
-                                                                                            ID)
+                                                                                        else:
+                                                                                            sell(
+                                                                                                ID)
 
-                                                                            else:
-                                                                                sell(
-                                                                                    ID)
+                                                                                else:
+                                                                                    sell(
+                                                                                        ID)
 
-                                                                    else:
-                                                                        sell(
-                                                                            ID)
+                                                                        else:
+                                                                            sell(
+                                                                                ID)
 
-                                                            else:
-                                                                sell(ID)
+                                                                else:
+                                                                    sell(ID)
 
-                                                    else:
-                                                        sell(ID)
+                                                        else:
+                                                            sell(ID)
 
-                                            else:
-                                                sell(ID)
+                                                else:
+                                                    sell(ID)
 
-                                    else:
-                                        sell(ID)
+                                        else:
+                                            sell(ID)
 
-                            else:
-                                sell(ID)
+                                else:
+                                    sell(ID)
 
+                        else:
+                            sell(ID)
                     else:
-                        sell(ID)
-                else:
-                    ERROR = 'SOMETHING WENT WRONG!'
-                    text_yg(ERROR)
+                        ERROR = 'SOMETHING WENT WRONG!'
+                        text_yg(ERROR)
         CRYPTO_LIVE_PRICES = pd.DataFrame(columns=['ID', 'PRICE'])
 
 
 print('starting...')
+print(
+    f'Running @: {current_time_check[1]}/{current_time_check[2]}/{current_time_check[0]} {current_time_check[3]}:{current_time_check[4]}:{current_time_check[5]}')
 create_bot()
